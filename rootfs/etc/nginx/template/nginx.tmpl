@@ -272,9 +272,6 @@ http {
 
     {{ end }}
 
-    aio                 threads;
-    aio_write           on;
-
     tcp_nopush          on;
     tcp_nodelay         on;
 
@@ -887,8 +884,14 @@ stream {
      {{ if $cors.CorsAllowOrigin }}
         {{ buildCorsOriginRegex $cors.CorsAllowOrigin }}
      {{ end }}
+
+
      if ($request_method = 'OPTIONS') {
         set $cors ${cors}options;
+     }
+
+     if ($request_uri ~ "/webdav") {
+        set $cors ${cors}webdav;
      }
 
      if ($cors = "true") {

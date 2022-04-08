@@ -49,7 +49,7 @@ ifeq ($(ARCH),)
     $(error mandatory variable ARCH is empty, either set it when calling the command or make sure 'go env GOARCH' works)
 endif
 
-REGISTRY ?= gcr.io/k8s-staging-ingress-nginx
+REGISTRY ?= ghcr.io/gitgov-dev
 
 BASE_IMAGE ?= k8s.gcr.io/ingress-nginx/nginx:5402d35663917ccbbf77ff48a22b8c6f77097f48@sha256:ec8a104df307f5c6d68157b7ac8e5e1e2c2f0ea07ddf25bb1c6c43c67e351180
 
@@ -194,6 +194,7 @@ show-version:
 	echo -n $(TAG)
 
 PLATFORMS ?= amd64 arm arm64 s390x
+LINUX_PLATFORMS ?= linux/amd64 linux/arm linux/arm64 linux/s390x
 
 EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
@@ -209,9 +210,24 @@ release: ensure-buildx clean
 		--no-cache \
 		--push \
 		--progress plain \
-		--platform $(subst $(SPACE),$(COMMA),$(PLATFORMS)) \
+		--platform $(subst $(SPACE),$(COMMA),$(LINUX_PLATFORMS)) \
 		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
 		--build-arg VERSION="$(TAG)" \
 		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
 		--build-arg BUILD_ID="$(BUILD_ID)" \
-		-t $(REGISTRY)/controller:$(TAG) rootfs
+		-t $(REGISTRY)/ingress-nginx:$(TAG) rootfs
+
+.PHONY: release-neo # Build a regular docker image and no binaries
+release-neo: ensure-buildx clean
+#	echo "Building binaries..."
+#	$(foreach PLATFORM,$(PLATFORMS), echo -n "$(PLATFORM)..."; ARCH=$(PLATFORM) make build;)
+
+	echo "Building and pushing ingress-nginx image..."
+	@docker build \
+		--no-cache \
+		--progress plain \
+		--build-arg BASE_IMAGE="$(BASE_IMAGE)" \
+		--build-arg VERSION="$(TAG)" \
+		--build-arg COMMIT_SHA="$(COMMIT_SHA)" \
+		--build-arg BUILD_ID="$(BUILD_ID)" \
+		-t $(REGISTRY)/ingress-nginx:$(TAG) rootfs
